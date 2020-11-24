@@ -2,7 +2,7 @@
 /* This file should hold your implementation of the predictor simulator */
 
 #include "bp_api.h"
-#inclue <stdio.h>
+#include <stdio.h>
 #include <vector>
 #include <cmath>
 using namespace std;
@@ -26,7 +26,7 @@ public:
 
 	bool predict() {
 		bool outcome;
-		if (current == WNT || current == NT) { outcome = false; }
+		if (current == WNT || current == SNT) { outcome = false; }
 		else { outcome = true; }
 		return outcome;
 	}
@@ -61,7 +61,7 @@ class Entry {
 		// constructor
 		Entry() = default; 
 		Entry(Entry&) = default; 
-		Entry& opetaor = (Entry&) = default;
+		Entry& operator=(Entry&) = default;
 		Entry(uint32_t tg, uint32_t target, unsigned historySize, unsigned fsmState, bool isGlobalHist, bool isGlobalTable) {
 			
 			tg_ = tg;
@@ -76,7 +76,7 @@ class Entry {
 			}
 
 			if (isGlobalTable_ == 0) {
-				unsigned vecSize = pow(2, historySize_);
+				int vecSize = pow(2, historySize_);
 				vector<FSM> fsm1(vecSize, FSM(this->fsmState_));
 				this->FSM_V = fsm1;
 
@@ -97,17 +97,18 @@ class Entry {
 	}
 
 	//initial the entry in case of collision
-	bool UpdateEntry(uint32_t tg1, uint32_t target1) {
+	void UpdateEntry(uint32_t tg1, uint32_t target1) {
 		this->tg_ = tg1;
 		this->target_ = target1;
-		if (isGlobalHist_ == 0) {
+		if (isGlobalHist_ == false) {
 			this->bhr_ = 0;
 		}
-		if (isGlobalTable_ == 0) {
-			for (int i = 0; i < this->FSM_V.size(); i++) {
-				this->FSM_V[i] = this->fsmState_;
-				}
-			return true;
+		if (isGlobalTable_ == false) {
+			int vecSize = pow(2, this->historySize_);
+			vector<FSM> fsm1(vecSize, FSM(this->fsmState_));
+			this->FSM_V = fsm1;
+				
+			return;
 		}
 	}
 
@@ -126,7 +127,7 @@ class Entry {
 	}
 
 	//correct the fsm by the last outcome
-	bool Update_Fsm(unsigned bhr, take res) {
+	void Update_Fsm(unsigned bhr, bool res) {
 		return this->FSM_V[bhr].update(res);
 	}
 
@@ -162,8 +163,8 @@ class Entry {
 
 	//given new entry, check if needed to replace current entry or if they are the same
 	void checkEntry(uint32_t tg1, uint32_t target1){
-		if (IsSame(uint32_t tg1, uint32_t target1)){
-			UpdateEntry(uint32_t tg1, uint32_t target1);
+		if (IsSame( tg1, target1)){
+			UpdateEntry( tg1, target1);
 		}
 	}
 };
@@ -256,7 +257,7 @@ public:
 	bool predict(uint32_t pc, uint32_t *dst) {
 		uint32_t tg = this->Create_Tg(pc);
 		int index = this->getIndex(tg);
-		if((this->Entries[index].GetTag()!=tg)||(this->Entries[index].Get_Dest==1))
+		if((this->Entries[index].GetTag()!=tg)||(this->Entries[index].Get_Dest()==1))
 		{
 			*dst = (pc + 4);
 			return false;
@@ -273,7 +274,7 @@ public:
 
 		if ((this->isGlobalHist == false) && (this->isGlobalTable == false))
 			{
-			taken = (this->Entries[index].predict(Lbhr);							
+			taken = (this->Entries[index].predict(Lbhr));							
 			}
 			
 				//2)his G fsm G-> check all in Class BP (share.mid....)
@@ -309,7 +310,7 @@ public:
 		
 
 		//update the fsm and history 
-		void Update_After(uint32_t tg, bool outcome) {
+		void Update_After(uint32_t tg, bool outcome, uint32_t pc) {
 			
 
 			int index = this->getIndex(tg);
@@ -374,7 +375,7 @@ public:
 			//get desierd n bits
 			int lsbBit = 2 + btbNumOfEntries - 1;
 			int msbBit = lsbBit + this->tagSize;
-			if (lsb > msb) { return 1; } //check lsb is smaller then msb
+			if (lsbBit > msbBit ) { return 1; } //check lsb is smaller then msb
 			for (unsigned i = lsbBit; i <= msbBit; i++) {(pc = pc | 1) << i;}//?
 			return pc;
 		}
@@ -397,11 +398,12 @@ public:
 			uint32_t tag = this->Create_Tg(pc);
 			int index = this->getIndex(tag);
 			this->Entries[index].checkEntry(tag, pred_dst); 
-			this->Update_After(tag, taken); 
+			this->Update_After(tag, taken,pc); 
 		}
 		
 		//create l/g share
 		uint32_t createShare(uint32_t pc){
+			uint32_t pcBits;
 			if (this->isGlobalTable){
 				if (this->Shared == USING_SHARED_LSB){
 					uint32_t pcBits = (pc >> 2) & ((1 << (2 + this->historySize))-1);
@@ -410,7 +412,7 @@ public:
 					uint32_t pcBits = (pc >> 16) & ((1 << (16 + this->historySize))-1);
 				}
 				int indx = getIndex(Create_Tg(pc));
-				return (pcBits^(this->Entries[indx].get_bhr);//xor
+				return (pcBits^(this->Entries[indx].get_bhr()));//xor
 			}
 			return 0;//if somthing went wrong
 		}
