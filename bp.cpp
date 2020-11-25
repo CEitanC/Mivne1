@@ -33,16 +33,16 @@ public:
 
 	void update(bool outcome) {
 		unsigned next;
-		if (current == SNT && outcome == true) { next = WNT; }
+		if ((current == SNT) && (outcome == true)) { next = WNT; }
 		//else if (current == SNT && outcome == NT){next = SNT;}
-		else if (current == WNT && outcome == true) { next = WT; }
-		else if (current == WNT && outcome == false) { next = SNT; }
-		else if (current == WT && outcome == true) { next = ST; }
-		else if (current == WT && outcome == false) { next = WNT; }
+		else if ((current == WNT) && (outcome == true)) { next = WT; }
+		else if ((current == WNT) && (outcome == false)) { next = SNT; }
+		else if ((current == WT) && (outcome == true)) { next = ST; }
+		else if ((current == WT) && (outcome == false)) { next = WNT; }
 		//else if (current == ST && outcome == T){next = ST;}
-		else if (current == ST && outcome == false) { next = WT; }
+		else if ((current == ST) && (outcome == false)) { next = WT; }
 		else { next = current; }
-		current = next;
+		this->current = next;
 
 	}
 };
@@ -72,12 +72,12 @@ class Entry {
 			isGlobalHist_ = isGlobalHist;
 			isGlobalTable_ = isGlobalTable;
 			BitValid = false;
-			if (isGlobalHist_ == 0) {
+			if (isGlobalHist_ == false) {
 				this->bhr_ = 0;
 				
 			}
 
-			if (isGlobalTable_ == 0) {
+			if (isGlobalTable_ == false) {
 				int vecSize = pow(2, historySize_);
 				vector<FSM> fsm1(vecSize, FSM(this->fsmState_));
 				this->FSM_V = fsm1;
@@ -86,6 +86,8 @@ class Entry {
 			
 
 		}
+
+		bool GetValid() { return this->BitValid; }
 	
 	// check if this is the same instruct like last time
 	bool IsSame(uint32_t tg1, uint32_t target1) {
@@ -98,10 +100,11 @@ class Entry {
 		return false;
 	}
 
-	//initial the entry in case of collision
+	//initial the entry
 	void UpdateEntry(uint32_t tg1, uint32_t target1) {
 		this->tg_ = tg1;
 		this->target_ = target1;
+		this->BitValid = true;
 		if (isGlobalHist_ == false) {
 			this->bhr_ = 0;
 		}
@@ -143,7 +146,7 @@ class Entry {
 	// update bhr
 		bool Update_Bhr(bool take1) {
 		unsigned tmp = this->bhr_;
-		unsigned tmp2 = (tmp << 1) & ((1 << ((this->historySize_) - 1)) - 1);
+		unsigned tmp2 = (tmp << 1) & ((1 << (this->historySize_)) - 1);
 		if (take1 == false) {
 			this->bhr_ = tmp2;
 
@@ -264,7 +267,12 @@ public:
 	bool predict(uint32_t pc, uint32_t* dst) {
 		uint32_t tg = this->Create_Tg(pc);
 		int index = this->getIndex(pc);
-		if((this->Entries[index].GetTag()!=tg)||(this->Entries[index].Get_Dest()==1))
+		if ((this->Entries[index].GetValid()==false))													//||(this->Entries[index].Get_Dest()==1)
+		{
+			*dst = (pc + 4);
+			return false;
+		}
+		if((this->Entries[index].GetTag()!=tg))													//||(this->Entries[index].Get_Dest()==1)
 		{
 			*dst = (pc + 4);
 			return false;
@@ -354,7 +362,7 @@ public:
 
 		void Update_Bhr(bool take1) {
 			unsigned tmp = this->GlobHist;
-			unsigned tmp2 = (tmp << 1) & ((1 << ((this->historySize) - 1)) - 1);
+			unsigned tmp2 = (tmp << 1) & ((1 << (this->historySize)) - 1);
 			if (take1 == false) {
 				this->GlobHist = tmp2;
 
@@ -404,7 +412,7 @@ public:
 			}
 			uint32_t tag = this->Create_Tg(pc);
 			int index = this->getIndex(pc);
-			this->Entries[index].checkEntry(tag, pred_dst); 
+			this->Entries[index].checkEntry(tag, targetPc); 
 			this->Update_After(tag, taken,pc); 
 		}
 		
@@ -420,7 +428,17 @@ public:
 					 pcBits = (pc1 >> 16) & ((1 << (16 + this->historySize))-1);
 				}
 				int indx = getIndex(pc);
-				return (pcBits^(this->Entries[indx].get_bhr()));//xor
+				unsigned HistId;
+				if(isGlobalHist==true)
+				{
+					HistId = this->GlobHist;
+				}
+				else
+				{
+					HistId = this->Entries[indx].get_bhr();
+				}
+				
+				return (pcBits^(HistId));//xor
 			}
 			return 0;//if somthing went wrong
 		}
