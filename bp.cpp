@@ -56,20 +56,22 @@ class Entry {
 	bool isGlobalHist_;
 	bool isGlobalTable_;
 	unsigned bhr_;
+	bool BitValid;
 	
 	public:
 		// constructor
 		Entry() = default; 
 		//Entry(Entry&) = default; 
 		//Entry& operator=(Entry&) = default;
-		Entry(uint32_t tg, uint32_t target, unsigned historySize, unsigned fsmState, bool isGlobalHist, bool isGlobalTable) {
+		Entry(unsigned historySize, unsigned fsmState, bool isGlobalHist, bool isGlobalTable) {
 			
-			tg_ = tg;
-			target_ = target;
+			//tg_ = tg;
+			//target_ = target;
 			historySize_ = historySize;
 			fsmState_ = fsmState;
 			isGlobalHist_ = isGlobalHist;
 			isGlobalTable_ = isGlobalTable;
+			BitValid = false;
 			if (isGlobalHist_ == 0) {
 				this->bhr_ = 0;
 				
@@ -163,6 +165,10 @@ class Entry {
 
 	//given new entry, check if needed to replace current entry or if they are the same
 	void checkEntry(uint32_t tg1, uint32_t target1){
+		if (this->BitValid == false) {
+			this->UpdateEntry(tg1, target1);
+			return;
+		}
 		if (IsSame( tg1, target1)==false){
 			UpdateEntry( tg1, target1);
 		}
@@ -220,7 +226,7 @@ public:
 		}
 		uint32_t DeafultTg = 1;
 		uint32_t DeafultTarget = 1;
-		vector<Entry> EntryTable(this->historySize, Entry(DeafultTg, DeafultTarget, this->historySize, this->fsmState, this->isGlobalHist, this->isGlobalTable));
+		vector<Entry> EntryTable(this->historySize, Entry( this->historySize, this->fsmState, this->isGlobalHist, this->isGlobalTable));
 		this->Entries = EntryTable;
 		//initial the stas
 		this->stats.br_num = 0;
@@ -255,15 +261,15 @@ public:
 
 
 
-	bool predict(uint32_t pc, uint32_t *dst) {
+	bool predict(uint32_t pc, uint32_t* dst) {
 		uint32_t tg = this->Create_Tg(pc);
-		int index = this->getIndex(tg);
+		int index = this->getIndex(pc);
 		if((this->Entries[index].GetTag()!=tg)||(this->Entries[index].Get_Dest()==1))
 		{
 			*dst = (pc + 4);
 			return false;
 		}
-																			//use func that get index to the Ghist by the pc too
+		//this->Entries[index].checkEntry(tg,																//use func that get index to the Ghist by the pc too
 		bool taken;
 		unsigned Lbhr = this->Entries[index].get_bhr();
 		unsigned Gbhr = this->GlobHist;
@@ -300,7 +306,7 @@ public:
 		}
 		else
 		{
-			*dst = pc + 4;
+			*dst = (pc + 4);
 		}
 
 		return taken;
@@ -314,7 +320,7 @@ public:
 		void Update_After(uint32_t tg, bool outcome, uint32_t pc) {
 			
 
-			int index = this->getIndex(tg);
+			int index = this->getIndex(pc);
 			
 			unsigned Lbhr = this->Entries[index].get_bhr();
 			unsigned Gbhr = this->GlobHist;
@@ -380,11 +386,12 @@ public:
 			return ((pc >> lsbBit) & ((1 << msbBit)-1));
 		}
 
-		//return entry index for given tag
-		int getIndex(uint32_t tag){
-		int btbNumOfEntries = log2(this->btbSize);
-			int entryIndex = (tag >> 0) & ((1 << btbNumOfEntries)-1);
-			return entryIndex;
+		//return entry index for given pc
+		int getIndex(uint32_t pc){
+		int btbNumOfEntries = log2(this->btbSize);// sizeBTB=4 -> NUM=2
+		
+		return( (pc >> 2) & ((1 << (btbNumOfEntries))-1)); 
+			
 		}
 
 
@@ -396,7 +403,7 @@ public:
 				this->stats.flush_num++;
 			}
 			uint32_t tag = this->Create_Tg(pc);
-			int index = this->getIndex(tag);
+			int index = this->getIndex(pc);
 			this->Entries[index].checkEntry(tag, pred_dst); 
 			this->Update_After(tag, taken,pc); 
 		}
@@ -405,13 +412,14 @@ public:
 		uint32_t createShare(uint32_t pc){
 			uint32_t pcBits;
 			if (this->isGlobalTable){
+				uint32_t pc1 = pc;
 				if (this->Shared == USING_SHARED_LSB){
-					 pcBits = (pc >> 2) & ((1 << (2 + this->historySize))-1);
+					 pcBits = (pc1 >> 2) & ((1 << (2 + this->historySize))-1);
 				}
 				else if (this->Shared == USING_SHARED_MID){
-					 pcBits = (pc >> 16) & ((1 << (16 + this->historySize))-1);
+					 pcBits = (pc1 >> 16) & ((1 << (16 + this->historySize))-1);
 				}
-				int indx = getIndex(Create_Tg(pc));
+				int indx = getIndex(pc);
 				return (pcBits^(this->Entries[indx].get_bhr()));//xor
 			}
 			return 0;//if somthing went wrong
