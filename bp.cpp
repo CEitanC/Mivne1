@@ -60,8 +60,8 @@ class Entry {
 	public:
 		// constructor
 		Entry() = default; 
-		Entry(Entry&) = default; 
-		Entry& operator=(Entry&) = default;
+		//Entry(Entry&) = default; 
+		//Entry& operator=(Entry&) = default;
 		Entry(uint32_t tg, uint32_t target, unsigned historySize, unsigned fsmState, bool isGlobalHist, bool isGlobalTable) {
 			
 			tg_ = tg;
@@ -192,7 +192,7 @@ class BP {
 
 public:
 	BP() = default;
-	~BP() = default; 
+//	~BP() = default; 
 
 	//initial the BTB
 	void InitBTB(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,bool isGlobalHist, bool isGlobalTable, int Shared){
@@ -405,10 +405,10 @@ public:
 			uint32_t pcBits;
 			if (this->isGlobalTable){
 				if (this->Shared == USING_SHARED_LSB){
-					uint32_t pcBits = (pc >> 2) & ((1 << (2 + this->historySize))-1);
+					 pcBits = (pc >> 2) & ((1 << (2 + this->historySize))-1);
 				}
 				else if (this->Shared == USING_SHARED_MID){
-					uint32_t pcBits = (pc >> 16) & ((1 << (16 + this->historySize))-1);
+					 pcBits = (pc >> 16) & ((1 << (16 + this->historySize))-1);
 				}
 				int indx = getIndex(Create_Tg(pc));
 				return (pcBits^(this->Entries[indx].get_bhr()));//xor
