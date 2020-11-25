@@ -15,12 +15,12 @@ int NOT_USING_SHARED = 0, USING_SHARED_LSB = 1,USING_SHARED_MID = 2;
 
 class FSM {
 	unsigned current;
-	const unsigned SNT = 0, WNT = 1, WT = 2, ST = 3;
+	 unsigned SNT = 0, WNT = 1, WT = 2, ST = 3;
 public:
 	FSM() = default; 
-	~FSM() = default;
-	FSM(FSM&) = default;
-	FSM& operator=(FSM&) = default;
+	//~FSM() = default;
+	//FSM(FSM&) = default;
+	//FSM& operator=(const FSM&) = default;
 
 	FSM(unsigned S_init) { this->current = S_init; }
 
@@ -141,7 +141,7 @@ class Entry {
 	// update bhr
 		bool Update_Bhr(bool take1) {
 		unsigned tmp = this->bhr_;
-		unsigned tmp2 = (tmp << 1) & (1 << ((this->historySize_) - 1) - 1);
+		unsigned tmp2 = (tmp << 1) & ((1 << ((this->historySize_) - 1)) - 1);
 		if (take1 == false) {
 			this->bhr_ = tmp2;
 
@@ -347,7 +347,7 @@ public:
 
 		void Update_Bhr(bool take1) {
 			unsigned tmp = this->GlobHist;
-			unsigned tmp2 = (tmp << 1) & (1 << ((this->historySize) - 1) - 1);
+			unsigned tmp2 = (tmp << 1) & ((1 << ((this->historySize) - 1)) - 1);
 			if (take1 == false) {
 				this->GlobHist = tmp2;
 
@@ -376,8 +376,7 @@ public:
 			int lsbBit = 2 + btbNumOfEntries - 1;
 			int msbBit = lsbBit + this->tagSize;
 			if (lsbBit > msbBit ) { return 1; } //check lsb is smaller then msb
-			for (unsigned i = lsbBit; i <= msbBit; i++) {(pc = pc | 1) << i;}//?
-			return pc;
+			return ((pc >> lsbBit) & ((1 << msbBit)-1));
 		}
 
 		//return entry index for given tag
