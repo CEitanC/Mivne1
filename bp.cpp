@@ -390,7 +390,7 @@ public:
 		void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 			this->stats.br_num++;
 			//chek if there was a mistke
-			if (((pred_dst != targetPc) && (taken != true)) || (((pc + 4) != targetPc) && (taken != false)))
+			if (((pred_dst != targetPc) && (taken == true)) || (((pc + 4) != pred_dst) && (taken == false)))
 			{
 				this->stats.flush_num++;
 			}
