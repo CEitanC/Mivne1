@@ -163,7 +163,7 @@ class Entry {
 
 	//given new entry, check if needed to replace current entry or if they are the same
 	void checkEntry(uint32_t tg1, uint32_t target1){
-		if (IsSame( tg1, target1)){
+		if (IsSame( tg1, target1)==false){
 			UpdateEntry( tg1, target1);
 		}
 	}
