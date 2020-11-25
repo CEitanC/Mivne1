@@ -224,18 +224,19 @@ public:
 		this->Entries = EntryTable;
 		//initial the stas
 		this->stats.br_num = 0;
-		this->stats.br_num = 0;
+		this->stats.flush_num = 0;
 		unsigned tarSize = 30;
+		unsigned ValidBit = 1; 
 		//size of one ;one in the BTB
-		unsigned TmpSize = (this->btbSize) * ((this->tagSize) + tarSize);
+		unsigned TmpSize = (this->btbSize) * ((this->tagSize) + tarSize+ValidBit);
 		//add the size of the history
 		if (this->isGlobalHist == true) {
 			TmpSize += this->historySize;
 		}
 		else
 		{
-			TmpSize += (this->GlobHist)*(this->btbSize);
-
+			TmpSize += (this->historySize)*(this->btbSize);
+			 
 		}
 		//add the size of the fsm
 		if (this->isGlobalTable == true) {
