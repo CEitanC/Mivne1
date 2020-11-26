@@ -12,41 +12,36 @@ unsigned SNT=0, WNT=1 , WT=2, ST=3;
 int NOT_USING_SHARED = 0, USING_SHARED_LSB = 1,USING_SHARED_MID = 2;
 
 
-
+// FSM-finite state machine class
 class FSM {
 	unsigned current;
 	 unsigned SNT = 0, WNT = 1, WT = 2, ST = 3;
 public:
-	FSM() = default; 
-	//~FSM() = default;
-	//FSM(FSM&) = default;
-	//FSM& operator=(const FSM&) = default;
-
+	FSM() = default; //default constructor
+	// initiate FSM state
 	FSM(unsigned S_init) { this->current = S_init; }
-
+	// return predicted state according to machine state
 	bool predict() {
 		bool outcome;
 		if (current == WNT || current == SNT) { outcome = false; }
 		else { outcome = true; }
 		return outcome;
 	}
-
+	// update FSM based on current state and prediction
 	void update(bool outcome) {
 		unsigned next;
 		if ((current == SNT) && (outcome == true)) { next = WNT; }
-		//else if (current == SNT && outcome == NT){next = SNT;}
 		else if ((current == WNT) && (outcome == true)) { next = WT; }
 		else if ((current == WNT) && (outcome == false)) { next = SNT; }
 		else if ((current == WT) && (outcome == true)) { next = ST; }
 		else if ((current == WT) && (outcome == false)) { next = WNT; }
-		//else if (current == ST && outcome == T){next = ST;}
 		else if ((current == ST) && (outcome == false)) { next = WT; }
 		else { next = current; }
 		this->current = next;
-
 	}
 };
-		
+
+// Entry class		
 class Entry {
 	vector<FSM> FSM_V;
 	uint32_t tg_;
@@ -61,12 +56,8 @@ class Entry {
 	public:
 		// constructor
 		Entry() = default; 
-		//Entry(Entry&) = default; 
-		//Entry& operator=(Entry&) = default;
+		
 		Entry(unsigned historySize, unsigned fsmState, bool isGlobalHist, bool isGlobalTable) {
-			
-			//tg_ = tg;
-			//target_ = target;
 			historySize_ = historySize;
 			fsmState_ = fsmState;
 			isGlobalHist_ = isGlobalHist;
@@ -99,7 +90,7 @@ class Entry {
 		}
 		return false;
 	}
-
+	void SetDst(uint32_t dst) { this->target_ = dst; }
 	//initial the entry
 	void UpdateEntry(uint32_t tg1, uint32_t target1) {
 		this->tg_ = tg1;
@@ -144,8 +135,8 @@ class Entry {
 	}
 
 
-	// update bhr
-		bool Update_Bhr(bool take1) {
+	// update local bhr
+		void Update_Bhr(bool take1) {
 		unsigned tmp = this->bhr_;
 		unsigned tmp2 = (tmp << 1) & ((1 << (this->historySize_)) - 1);
 		if (take1 == false) {
@@ -154,13 +145,13 @@ class Entry {
 		}
 		else
 		{
-
-			unsigned tmp3 = tmp2 | 1;
+			unsigned bit = 1;
+			unsigned tmp3 = tmp2 | bit;
 			this->bhr_ = tmp3;
 		
 			
 		}
-		return true;
+		//return true;
 
 		
 		}
@@ -201,11 +192,13 @@ class BP {
 
 
 public:
+	//default constructor 
 	BP() = default;
-//	~BP() = default; 
+ 
 
 	//initial the BTB
-	void InitBTB(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,bool isGlobalHist, bool isGlobalTable, int Shared){
+	void InitBTB(unsigned btbSize, unsigned historySize, unsigned tagSize,
+		unsigned fsmState,bool isGlobalHist, bool isGlobalTable, int Shared){
 	
 		this->btbSize = btbSize;
 		this->historySize = historySize;
@@ -229,7 +222,8 @@ public:
 			this->GlobHist = 0;
 		}
 		
-		vector<Entry> EntryTable(this->btbSize, Entry( this->historySize, this->fsmState, this->isGlobalHist, this->isGlobalTable));
+		vector<Entry> EntryTable(this->btbSize, Entry( this->historySize,
+			this->fsmState, this->isGlobalHist, this->isGlobalTable));
 		this->Entries = EntryTable;
 		//initial the stas
 		this->stats.br_num = 0;
@@ -262,22 +256,22 @@ public:
 
 
 
-
+	// predict if there's need to take or not using the history and fsm
 
 	bool predict(uint32_t pc, uint32_t* dst) {
 		uint32_t tg = this->Create_Tg(pc);
 		int index = this->getIndex(pc);
-		if ((this->Entries[index].GetValid()==false))													//||(this->Entries[index].Get_Dest()==1)
+		if ((this->Entries[index].GetValid()==false))													
 		{
 			*dst = (pc + 4);
 			return false;
 		}
-		if((this->Entries[index].GetTag()!=tg))													//||(this->Entries[index].Get_Dest()==1)
+		if((this->Entries[index].GetTag()!=tg))									
 		{
 			*dst = (pc + 4);
 			return false;
 		}
-		//this->Entries[index].checkEntry(tg,																//use func that get index to the Ghist by the pc too
+		
 		bool taken;
 		unsigned Lbhr = this->Entries[index].get_bhr();
 		unsigned Gbhr = this->GlobHist;
@@ -324,7 +318,7 @@ public:
 
 		
 
-		//update the fsm and history 
+		//update the fsm and history ater the program decided whether to take or not
 		void Update_After(uint32_t tg, bool outcome, uint32_t pc) {
 			
 
@@ -359,7 +353,7 @@ public:
 				this->Update_Bhr(outcome);
 			}
 		}
-
+		//update the Global history of the BTB
 		void Update_Bhr(bool take1) {
 			unsigned tmp = this->GlobHist;
 			unsigned tmp2 = (tmp << 1) & ((1 << (this->historySize)) - 1);
@@ -377,32 +371,28 @@ public:
 			}
 			return ;
 		}
-
+		//return the stas
 		void BP_Get_Stats(SIM_stats *cur) {
 			cur->br_num = this->stats.br_num;
 			cur->flush_num = this->stats.flush_num;
 			cur->size = this->stats.size;
 		}
 
-		//create tag
+		//create tag by using the pc                                                          
 		uint32_t Create_Tg(uint32_t pc){//remove tagsize btbsize
 			int btbNumOfEntries = log2(this->btbSize);
 			//get desierd n bits
-			int lsbBit = 2 + btbNumOfEntries - 1;
-			int msbBit = lsbBit + this->tagSize;
-			if (lsbBit > msbBit ) { return 1; } //check lsb is smaller then msb
-			return ((pc >> lsbBit) & ((1 << msbBit)-1));
+			return (pc >>(2+btbNumOfEntries))&((1 << this->tagSize) - 1);
 		}
 
 		//return entry index for given pc
 		int getIndex(uint32_t pc){
 		int btbNumOfEntries = log2(this->btbSize);// sizeBTB=4 -> NUM=2
 		
-		return( (pc >> 2) & ((1 << (btbNumOfEntries))-1)); 
-			
+		return( (pc >> 2) & ((1 << (btbNumOfEntries))-1)); 	
 		}
 
-
+		// update the stat and the entry after the program decided to take or not
 		void BP_update(uint32_t pc, uint32_t targetPc, bool taken, uint32_t pred_dst) {
 			this->stats.br_num++;
 			//chek if there was a mistke
@@ -412,20 +402,21 @@ public:
 			}
 			uint32_t tag = this->Create_Tg(pc);
 			int index = this->getIndex(pc);
+			if (tag == this->Entries[index].GetTag()) { this->Entries[index].SetDst(targetPc);}
 			this->Entries[index].checkEntry(tag, targetPc); 
 			this->Update_After(tag, taken,pc); 
 		}
 		
-		//create l/g share
+		//create an index to the FSM the is based on the pc and on the history in the situation of "share"
 		uint32_t createShare(uint32_t pc){
-			uint32_t pcBits;
+			unsigned pcBits;  
 			if (this->isGlobalTable){
 				uint32_t pc1 = pc;
 				if (this->Shared == USING_SHARED_LSB){
-					 pcBits = (pc1 >> 2) & ((1 << (2 + this->historySize))-1);
+					 pcBits = (pc1 >> 2) & ((1 << (this->historySize))-1);  ///omit +2
 				}
 				else if (this->Shared == USING_SHARED_MID){
-					 pcBits = (pc1 >> 16) & ((1 << (16 + this->historySize))-1);
+					 pcBits = (pc1 >> 16) & ((1 << (this->historySize))-1); //omit +16
 				}
 				int indx = getIndex(pc);
 				unsigned HistId;
@@ -440,13 +431,13 @@ public:
 				
 				return (pcBits^(HistId));//xor
 			}
-			return 0;//if somthing went wrong
+			return 0;//if something went wrong
 		}
 	};
 
 
 
-
+	// 'global' BP
 	BP bp; 
 
 	int BP_init(unsigned btbSize, unsigned historySize, unsigned tagSize, unsigned fsmState,
@@ -469,7 +460,7 @@ public:
 		bp.BP_update(pc, targetPc, taken, pred_dst);
 		return;
 	}
-
+	
 	void BP_GetStats(SIM_stats* curStats) {
 		bp.BP_Get_Stats(curStats);
 		return;
