@@ -111,6 +111,7 @@ class Entry {
 		if (isGlobalTable_ == false) {
 			int vecSize = pow(2, this->historySize_);
 			vector<FSM> fsm1(vecSize, FSM(this->fsmState_));
+			this->FSM_V.clear(); 
 			this->FSM_V = fsm1;
 				
 			return;
@@ -227,9 +228,8 @@ public:
 		{
 			this->GlobHist = 0;
 		}
-		uint32_t DeafultTg = 1;
-		uint32_t DeafultTarget = 1;
-		vector<Entry> EntryTable(this->historySize, Entry( this->historySize, this->fsmState, this->isGlobalHist, this->isGlobalTable));
+		
+		vector<Entry> EntryTable(this->btbSize, Entry( this->historySize, this->fsmState, this->isGlobalHist, this->isGlobalTable));
 		this->Entries = EntryTable;
 		//initial the stas
 		this->stats.br_num = 0;
